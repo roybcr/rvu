@@ -1,0 +1,44 @@
+use winit::{
+    dpi::{PhysicalSize, Size},
+    event::{Event, WindowEvent},
+    event_loop::{ControlFlow, EventLoop},
+    window::WindowBuilder,
+};
+
+fn main() {
+    let event_loop = EventLoop::new();
+
+    let window = WindowBuilder::new()
+        .with_title("RVU")
+        .with_min_inner_size(Size::Physical(PhysicalSize {
+            width: 1080,
+            height: 920,
+        }))
+        .build(&event_loop);
+
+    let window = window.as_ref().cloned();
+    event_loop.run(|ev, _, control_flow| {
+        *control_flow = ControlFlow::Wait;
+        match ev {
+            Event::WindowEvent { window_id, event } => match event {
+                WindowEvent::Focused(focused) => {
+                    if focused {
+                        println!("Window Focused => {:#?}", window_id)
+                    } else {
+                        println!("Window Blurred => {:#?}", window_id)
+                    }
+                }
+                _ => (),
+            },
+
+            Event::RedrawRequested(window_id) => {
+                println!("Window redraw request had been arrived => {:#?}", window_id);
+                window.and_then(|w| {
+                    w.set_maximized(true);
+                    Ok(w)
+                });
+            }
+            _ => (),
+        }
+    });
+}
