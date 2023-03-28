@@ -6,23 +6,29 @@ use thiserror::Error;
 use winit::{
         dpi::PhysicalSize,
         error::OsError,
-        event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
+        event::{
+                ElementState,
+                Event,
+                KeyboardInput,
+                VirtualKeyCode,
+                WindowEvent,
+        },
         event_loop::{ControlFlow, EventLoop},
         window::WindowBuilder,
 };
 
 #[derive(Debug, Error)]
 enum RVUError {
-        #[error("Unable to create a window.")]
-        WindowError(#[from] OsError),
-
         #[error("An error occured while processing the image.")]
         ImageError(#[from] image::ImageError),
 
         #[error("An error  occured while loading the image.")]
         IoError(#[from] std::io::Error),
 
-        #[error("Unable to calculate maximum screen size on your primary monitor.")]
+        #[error(
+                "Unable to calculate maximum screen size on your primary \
+                 monitor."
+        )]
         NoPrimaryMonitor,
 
         #[error("Couldn't draw the requested image.")]
@@ -30,6 +36,9 @@ enum RVUError {
 
         #[error("Couldn't render the requested image.")]
         RenderError(pixels::Error),
+
+        #[error("Unable to create a window.")]
+        WindowError(#[from] OsError),
 }
 
 #[derive(Debug, Parser)]
@@ -61,15 +70,19 @@ fn main() -> Result<()> {
         let hscale = calc_scale(max_screen_size.0, img.width());
         let vscale = calc_scale(max_screen_size.1, img.height());
         let scale = std::cmp::max(hscale, vscale);
-        let window_inner_size = PhysicalSize::new(img.width() / scale, img.height() / scale);
+        let window_inner_size =
+                PhysicalSize::new(img.width() / scale, img.height() / scale);
 
         let window = WindowBuilder::new()
                 .with_title("RVU")
                 .with_inner_size(window_inner_size)
                 .build(&event_loop)?;
 
-        let surface =
-                SurfaceTexture::new(window_inner_size.width, window_inner_size.height, &window);
+        let surface = SurfaceTexture::new(
+                window_inner_size.width,
+                window_inner_size.height,
+                &window,
+        );
         let mut pixels = Pixels::new(img.width(), img.height(), surface)?;
         let img_bytes = img.as_rgb8().unwrap().as_flat_samples();
         let img_bytes = img_bytes.as_slice();
@@ -87,10 +100,16 @@ fn main() -> Result<()> {
 
         event_loop.run(move |ev, _, control_flow| {
         *control_flow = ControlFlow::Wait;
+
         match ev {
-            Event::RedrawRequested(_) => { let _ = pixels.render().map_err(RVUError::RenderError); },
+            Event::RedrawRequested(_) => {
+                let _ = pixels.render().map_err(RVUError::RenderError);
+            }
             Event::WindowEvent { window_id, event } if window_id == window.id() => match event {
-                WindowEvent::ScaleFactorChanged { scale_factor: _, new_inner_size } => resize(&mut pixels, &new_inner_size),
+                WindowEvent::ScaleFactorChanged {
+                    scale_factor: _,
+                    new_inner_size,
+                } => resize(&mut pixels, &new_inner_size),
                 WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
                 WindowEvent::Resized(size) => resize(&mut pixels, &size),
                 WindowEvent::KeyboardInput {
@@ -102,7 +121,7 @@ fn main() -> Result<()> {
                         },
                     ..
                 } => *control_flow = ControlFlow::Exit,
-               _ => (),
+                _ => (),
             },
             _ => (),
         }
